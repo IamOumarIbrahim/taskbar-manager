@@ -1,0 +1,9 @@
+{
+  "groupColumns": {
+    "Work": 5
+  },
+  "moves": [
+    { "pin": "Notepad", "group": "Work", "tooltip": "Notepad", "path": "%WINDIR%\\System32\\notepad.exe" },
+    { "pin": "Outlook", "group": "Work" }
+  ]
+}
