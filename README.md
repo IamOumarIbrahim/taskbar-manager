@@ -29,6 +29,15 @@ Copy-Item layout.example.json layout.json
 
 `layout.json` is ignored by git, so your personal layout stays private.
 
+To put an app that isn't pinned on the taskbar, add it straight to a group (groups are already pinned):
+
+```powershell
+./taskbar.ps1 add -Group Work -Path "%APPDATA%\Microsoft\Windows\Start Menu\Programs\App.lnk"            # preview
+./taskbar.ps1 add -Group Work -Path "%APPDATA%\Microsoft\Windows\Start Menu\Programs\App.lnk" -Execute   # add it
+```
+
+`-Tooltip` sets the label; it defaults to the file name.
+
 ## Layout file
 
 | Field | Required | Description |
@@ -47,7 +56,7 @@ If a group item with the same file name points to a missing file, `path` repairs
 
 These come from how Windows and App Group behave:
 
-- **Pinning:** Windows offers scripts an unpin action but no pin action, so new pins are manual.
+- **Pinning:** Windows offers scripts an unpin action but no pin action, so new pins are manual. Use `add` to put an app in a pinned group instead.
 - **Store apps:** Windows offers no unpin action for packaged apps such as PowerShell.
 - **Taskbar order:** the order lives in an undocumented registry value, so drag icons by hand.
 - **Group icons:** new items are added at the end, so the group's icon isn't redrawn automatically.

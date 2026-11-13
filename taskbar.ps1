@@ -8,14 +8,20 @@
     ./taskbar.ps1 apply                        # dry run
     ./taskbar.ps1 apply -Execute -SkipUnpin    # update groups only
     ./taskbar.ps1 apply -Execute               # update groups, then unpin
+    ./taskbar.ps1 add -Group Work -Path app.lnk -Execute   # add an app that isn't pinned
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('list', 'apply')]
+    [ValidateSet('list', 'apply', 'add')]
     [string]$Command = 'list',
 
     [string]$Layout = (Join-Path $PSScriptRoot 'layout.json'),
+
+    # add: App Group group, shortcut or program to put in it, optional label
+    [string]$Group,
+    [string]$Path,
+    [string]$Tooltip,
 
     [switch]$Execute,
 
@@ -192,6 +198,38 @@ if ($Command -eq 'list') {
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
     throw "App Group data was not found at $ConfigPath. Install App Group and create a group first."
 }
+
+if ($Command -eq 'add') {
+    # Windows has no scriptable pin action, but a group is already pinned, so
+    # adding the app to a group puts it on the taskbar.
+    if (-not $Group -or -not $Path) { throw 'add needs -Group and -Path.' }
+    $itemPath = [Environment]::ExpandEnvironmentVariables($Path)
+    if (-not (Test-Path -LiteralPath $itemPath)) { throw "Not found: $itemPath" }
+    $itemPath = (Resolve-Path -LiteralPath $itemPath).Path
+    $config = Read-AppGroupConfig
+    $target = Find-Group $config $Group
+    if (-not $target) { throw "Group '$Group' does not exist in App Group." }
+    $label = if ($Tooltip) { $Tooltip } else { [IO.Path]::GetFileNameWithoutExtension($itemPath) }
+    $plan = @([pscustomobject]@{
+            Pin            = $label
+            Group          = $Group
+            Path           = $itemPath
+            Tooltip        = $label
+            AlreadyInGroup = [bool](Find-Member $target $itemPath)
+        })
+    $plan | Format-Table Pin, Group, AlreadyInGroup -AutoSize
+    if (-not $Execute) {
+        Write-Host 'Dry run. Add -Execute to apply.'
+        return
+    }
+    Update-Groups $plan $config ([pscustomobject]@{})
+    if (-not (Find-Member (Find-Group (Read-AppGroupConfig) $Group) $itemPath)) {
+        throw "'$label' is missing from '$Group' after saving."
+    }
+    Write-Host "added  $label -> $Group"
+    return
+}
+
 if (-not (Test-Path -LiteralPath $Layout)) {
     throw "Layout not found: $Layout. Copy layout.example.json to layout.json and edit it."
 }
